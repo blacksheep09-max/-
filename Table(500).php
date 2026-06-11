@@ -90,41 +90,27 @@ class Table
 
     private $userInfo = [];
 
+    private $uid = 0;
 
+    private $free = 0;
 
-    private $uid = 0;  //uid
+    private $map = [];
 
+    private $betGold = 0;
 
+    private $betDouble = 1;
 
-    private $free = 0;  
+    private $roomRule = [];
 
+    private $use = 0;
 
-
-    private $map = [];   
-
-    
-
-    private $betGold = 0;   
-
-
-
-    private $betDouble = 1;  
-
-
-
-    private $roomRule = [];  //
-
-
-
-    private $use = 0;   
-
-    private $mTimer = 0;   
-
-
+    private $mTimer = 0;
 
     private $mapPossible = [];
 
     private $wildPossible = [];
+
+    private $mapPossibleSum = [];
 
 
 
@@ -474,29 +460,27 @@ class Table
 
         
 
-        if ($this->free > 0 && !empty($control_map[$control]['free_map']) && is_array($control_map[$control]['free_map'])) {
+        $has_free_map = $this->free > 0 && !empty($control_map[$control]['free_map']) && is_array($control_map[$control]['free_map']);
 
-            /*foreach ($control_map[$control]['free_map'] as $key => $value) {
+        $has_normal_map = !empty($control_map[$control]) && is_array($control_map[$control]['map']);
 
-                foreach ($value as $key1 => $value1) {
+        $this->mapPossibleSum = [];
 
-                    $this->mapPossible[$key1][$key] = $value1;
-
-                }
-
-            }*/
-
-
+        if ($has_free_map) {
 
             $this->mapPossible = $control_map[$control]['free_map'];
 
+            $free_wild = $control_map[$control]['free_wild'] ?? null;
+
             for ($i = 0; $i < 5; $i++) {
 
-                $this->wildPossible[$i] = $i && isset($control_map[$control]['free_wild']) ? $control_map[$control]['free_wild'][$i] : 0;
+                $this->wildPossible[$i] = ($i && $free_wild) ? ($free_wild[$i] ?? 0) : 0;
+
+                $this->mapPossibleSum[$i] = array_sum($this->mapPossible[$i]);
 
             }
 
-        } elseif (empty($control_map[$control]) || !is_array($control_map[$control]['map'])) {
+        } elseif (!$has_normal_map) {
 
             for ($i = 0; $i < 5; $i++) {
 
@@ -504,27 +488,21 @@ class Table
 
                 $this->wildPossible[$i] = mt_rand(1, 6) ? 20 : 0;
 
+                $this->mapPossibleSum[$i] = array_sum(POSSIBLE);
+
             }
 
         } else {
 
-            /* foreach ($control_map[$control]['map'] as $key => $value) {
-
-                 foreach ($value as $key1 => $value1) {
-
-                     $this->mapPossible[$key1][$key] = $value1;
-
-                 }
-
-             }*/
-
-
-
             $this->mapPossible = $control_map[$control]['map'];
+
+            $wild = $control_map[$control]['wild'] ?? null;
 
             for ($i = 0; $i < 5; $i++) {
 
-                $this->wildPossible[$i] = $i && isset($control_map[$control]['wild']) ? $control_map[$control]['wild'][$i] : 0;
+                $this->wildPossible[$i] = ($i && $wild) ? ($wild[$i] ?? 0) : 0;
+
+                $this->mapPossibleSum[$i] = array_sum($this->mapPossible[$i]);
 
             }
 
@@ -565,46 +543,21 @@ class Table
                 $free_reroll_min_double = 80;
             }
 
-        $free_max_score = $is_free_round ? $this->use * $free_max_double : PHP_INT_MAX;
-
-        // 本轮免费游戏累计上限，由进入免费时随机到的档位决定
-        $free_total_max_double = $this->free_total_limit_double;
-        $free_total_max_score = $is_free_round ? $this->use * $free_total_max_double : PHP_INT_MAX;
-
-        $free_total_left_score = $is_free_round ? max(0, $free_total_max_score - $this->free_get) : PHP_INT_MAX;
-
-        $free_reroll_min_score = $is_free_round ? $this->use * $free_reroll_min_double : 0;
-
-        $free_total_min_score = $is_free_round ? $this->use * $this->free_total_min_double : 0;
-        $free_total_need_score = $is_free_round ? max(0, $free_total_min_score - $this->free_get) : 0;
-
-        $free_left_count = $this->free;
-        $need_boost_free_score = false;
-        $boost_min_score = 0;
-        $boost_max_score = PHP_INT_MAX;
-        $is_free_boom_round = false;
+        $use_val = $this->use;
+        $free_max_score = $is_free_round ? $use_val * $free_max_double : PHP_INT_MAX;
+        $free_total_left_score = $is_free_round ? max(0, $use_val * $this->free_total_limit_double - $this->free_get) : PHP_INT_MAX;
+        $free_reroll_min_score = $is_free_round ? $use_val * $free_reroll_min_double : 0;
 
         // 判断当前这转是否是本轮免费指定的爆奖转
-        if (
-            $is_free_round &&
-            !$this->free_boom_used &&
-            $this->free_boom_left_count > 0 &&
-            $free_left_count == $this->free_boom_left_count
-        ) {
-            $is_free_boom_round = true;
-        }
+        $is_free_boom_round = $is_free_round && !$this->free_boom_used && $this->free_boom_left_count > 0 && $this->free == $this->free_boom_left_count;
+        $need_boost_free_score = $is_free_boom_round;
+        $boost_min_score = 0;
+        $boost_max_score = PHP_INT_MAX;
 
-        if ($is_free_round && $is_free_boom_round) {
-            // 只有爆奖转才强制摇高倍地图
-            $need_boost_free_score = true;
-
-            $boost_min_score = $this->use * $this->free_boom_min_double;
-            $boost_max_score = $this->use * $this->free_boom_max_double;
-
-            // 单次爆奖不能超过本轮免费总剩余额度
+        if ($need_boost_free_score) {
+            $boost_min_score = $use_val * $this->free_boom_min_double;
+            $boost_max_score = $use_val * $this->free_boom_max_double;
             $boost_max_score = min($boost_max_score, $free_total_left_score);
-
-            // 如果剩余额度已经低于爆奖最低值，则以剩余额度为准，避免永远摇不到
             if ($boost_max_score < $boost_min_score) {
                 $boost_min_score = $boost_max_score;
             }
@@ -636,41 +589,31 @@ class Table
         $best_free_deal_map = [];
         $best_free_result = null;
         $found_valid_free_map = false;
+        $is_unset_logo = $this->all_win >= MAX_WIN_SCORE;
+        $control_val = $control;
+        $empty_cur_result = [
+            'disappear' => [],
+            'score' => [],
+            'logo_info' => [],
+            'cur_gold' => [],
+            'double_arr' => [],
+            'cur_time' => [],
+            'free_logo' => 0,
+            'getfree' => 0,
+        ];
         for ($i = 0; $i < $loop_max; $i++) {
             
 
 
-            $is_unset_logo = $this->all_win < MAX_WIN_SCORE ? false : true;
-
-            $this->cur_result = [
-
-                'disappear' => [],
-
-                'score' => [],
-
-                'logo_info' => [],
-
-                'cur_gold' => [],
-
-                'double_arr' => [],
-
-                'cur_time' => [],
-
-                'free_logo' => 0,
-
-                'getfree' => 0
-
-            ];
-
+            $this->cur_result = $empty_cur_result;
             $this->map = [];
-
             $this->deal_map = [];
 
             $this->GetMap(0, $is_unset_logo, $logo_num);
 
             $total_score = array_sum($this->cur_result['score']);
-            // 记录本轮重摇中分数最高的结果
-            if ($is_free_round && $need_boost_free_score && $total_score > $best_free_score) {
+            // 记录爆奖转重摇中分数最高的结果
+            if ($need_boost_free_score && $total_score > $best_free_score) {
                 $best_free_score = $total_score;
                 $best_free_map = $this->map;
                 $best_free_deal_map = $this->deal_map;
@@ -689,31 +632,20 @@ class Table
             if ($is_free_round && $total_score > $free_total_left_score) {
                 continue;
             }
-            if ($is_free_round && $need_boost_free_score && $boost_min_score > 0) {
-                // 爆奖转低于最低目标，丢弃重摇
-                if ($total_score < $boost_min_score) {
+            if ($need_boost_free_score) {
+                if ($boost_min_score > 0 && ($total_score < $boost_min_score || $total_score > $boost_max_score)) {
                     continue;
                 }
-
-                // 爆奖转高于最高目标，丢弃重摇，避免单次爆太多导致整轮超上限
-                if ($total_score > $boost_max_score) {
+                if ($total_score <= 0) {
                     continue;
                 }
             }
 
-
-            if ($is_free_round && $need_boost_free_score && $total_score <= 0) {
-                continue;
-            }
-
-            if ($total_score <= 0 || $this->all_win + $total_score - $use < MAX_WIN_SCORE && $total_score < 250 * $this->use || $control == 2) {
+            if ($total_score <= 0 || ($this->all_win + $total_score - $use < MAX_WIN_SCORE && $total_score < 250 * $use_val) || $control_val == 2) {
                 $found_valid_free_map = true;
-
-                // 如果当前是爆奖转，并且已经摇到合格地图，则标记本轮免费已经爆过
                 if ($is_free_boom_round) {
                     $this->free_boom_used = true;
                 }
-
                 break;
             }
 
@@ -723,17 +655,10 @@ class Table
         }
 
 
-        if (
-            $is_free_round &&
-            $need_boost_free_score &&
-            !$found_valid_free_map &&
-            $best_free_result !== null
-        ) {
+        if ($need_boost_free_score && !$found_valid_free_map && $best_free_result !== null) {
             $this->map = $best_free_map;
             $this->deal_map = $best_free_deal_map;
             $this->cur_result = $best_free_result;
-
-            // 即使50次没完全达标，也使用最高分地图，并认为爆奖转已经执行过
             if ($is_free_boom_round) {
                 $this->free_boom_used = true;
             }
@@ -1152,26 +1077,15 @@ class Table
 
         $golden_columns = [];
         if ($this->is_free_guarantee) {
-            $free_positions = [];
-            $middle_cols = [1,2,3]; 
-            $middle_rows = [1,2,3];
-            $max_free_count = 3;
-            $loop_limit = 10;
-            $loop_count = 0;
-            while (count($free_positions) < $max_free_count && $loop_count < $loop_limit) {
-                $col = $middle_cols[mt_rand(0, 2)];  // 仅在列1/2/3中随机
-                $row = $middle_rows[mt_rand(0, 2)];  // 仅在行1/2/3中随机
-                $pos = $col * 10 + $row;
-                if (!in_array($pos, $free_positions)) {
-                    $free_positions[] = $pos;
-                }
-                $loop_count++;
-            }
-            $free_positions = array_slice($free_positions, 0, $max_free_count);
-            foreach ($free_positions as $pos) {
-                $col = intval($pos / 10);
-                $row = $pos % 10;
+            $candidate_cols = [1, 2, 3];
+            $candidate_rows = [1, 2, 3];
+            shuffle($candidate_cols);
+            shuffle($candidate_rows);
+            for ($k = 0; $k < 3; $k++) {
+                $col = $candidate_cols[$k];
+                $row = $candidate_rows[$k];
                 $map[$col][$row] = FREE;
+                $free_count[] = $col * 10 + $row;
             }
             $this->is_free_guarantee = false;
             $this->normal_round_count = 0;
@@ -1191,24 +1105,24 @@ class Table
             $golden_columns = array_slice($available_cols, 0, $golden_count);
         }
 
+        $col_has_free = [false, false, false, false, false];
         for ($i = 0; $i < 5; $i++) {
+            if (!empty($map[$i])) {
+                $col_has_free[$i] = in_array(FREE, $map[$i]);
+            }
+        }
 
+        for ($i = 0; $i < 5; $i++) {
             for ($j = 0; $j < 6; $j++) {
-
                 if (!isset($map[$i][$j])) {
-
                     $possible = $this->mapPossible[$i];
-
                     unset($possible[BAIDA]);
 
-                    
-
-                    if (count($free_count) > 4 || !empty($map[$i]) && in_array(FREE, $map[$i]) && mt_rand(1, 100) <= 5
-
-                        || (count($free_count) >= 1 && mt_rand(1, 100) <= 90 || count($free_count) >= 2) && $free) {
-
+                    $free_cnt_val = count($free_count);
+                    if ($free_cnt_val > 4
+                        || (!empty($map[$i]) && $col_has_free[$i] && mt_rand(1, 100) <= 5)
+                        || (($free_cnt_val >= 1 && mt_rand(1, 100) <= 90) || $free_cnt_val >= 2) && $free) {
                         unset($possible[FREE]);
-
                     }
 
 
@@ -1368,99 +1282,59 @@ class Table
         $logo_info = [];  
 
         for ($i = 0; $i < 5; $i++) {
-
             $logo_count[$i] = [];
-
             for ($j = 0; $j < 5; $j++) {
-
                 if ($j == 4 && ($i == 0 || $i == 4)) {
-
                     continue;
-
                 }
-
-
-
-                if ($map[$i][$j] == FREE) {
-
+                $cell = $map[$i][$j];
+                if ($cell == FREE) {
                     $free_count[] = $i * 10 + $j;
-
-                }
-
-
-
-                if ($map[$i][$j] == FREE || $map[$i][$j] == BAIDA && !$i) {
-
                     continue;
-
                 }
-
-
-
-                $logo = $map[$i][$j] >= 100 ? $map[$i][$j] % 100 : $map[$i][$j];
-
-                if (!isset($logo_count[$i][$logo])) {
-
-                    $logo_count[$i][$logo] = 1;
-
-                } else {
-
+                if ($cell == BAIDA && !$i) {
+                    continue;
+                }
+                $logo = $cell >= 100 ? $cell % 100 : $cell;
+                if (isset($logo_count[$i][$logo])) {
                     $logo_count[$i][$logo]++;
-
+                } else {
+                    $logo_count[$i][$logo] = 1;
                 }
-
             }
-
         }
 
 
 
         $start_logo = $logo_count[0];
-
         $logo_get_max = [];
+        $baida_counts = [];
+        for ($i = 1; $i < 5; $i++) {
+            $baida_counts[$i] = $logo_count[$i][BAIDA] ?? 0;
+        }
 
         foreach ($start_logo as $key => $value) {
-
             $start_num = $value;
-
             for ($i = 1; $i < 5; $i++) {
-
-                if (isset($logo_count[$i][$key]) || isset($logo_count[$i][BAIDA])) {
-
-                    $baida = $logo_count[$i][BAIDA] ?? 0;
-
-                    $self_logo = $logo_count[$i][$key] ?? 0;
-
-                    $start_num *= ($self_logo + $baida);
-
+                $self_logo = $logo_count[$i][$key] ?? 0;
+                if ($self_logo > 0 || $baida_counts[$i] > 0) {
+                    $start_num *= ($self_logo + $baida_counts[$i]);
                     if ($i == 4) {
-
-                        $score += $start_num * DOUBLE[$key][5];
-
+                        $d = DOUBLE[$key][5];
+                        $score += $start_num * $d;
                         $logo_get_max[$key] = 5;
-
-                        $logo_info[$key] = ['tiao' => $start_num, 'lian' => 5, 'double' => DOUBLE[$key][5]];
-
+                        $logo_info[$key] = ['tiao' => $start_num, 'lian' => 5, 'double' => $d];
                     }
-
                 } else {
-
                     if ($i > 2) {
-
-                        $score += $start_num * DOUBLE[$key][$i];
-
+                        $d = DOUBLE[$key][$i];
+                        $score += $start_num * $d;
                         $logo_get_max[$key] = $i;
-
-                        $logo_info[$key] = ['tiao' => $start_num, 'lian' => $i, 'double' => DOUBLE[$key][$i]];
-
+                        $logo_info[$key] = ['tiao' => $start_num, 'lian' => $i, 'double' => $d];
                     }
-
                     break;
-
                 }
-
             }
-
         }
 
 
@@ -1470,49 +1344,29 @@ class Table
 
 
         $disappear = [];
-
-        if (count($logo_get_max)) {
-
+        if (!empty($logo_get_max)) {
+            $max_chain = max($logo_get_max);
             for ($i = 0; $i < 5; $i++) {
-
                 for ($j = 0; $j < 5; $j++) {
-
                     if ($j == 4 && ($i == 0 || $i == 4)) {
-
                         continue;
-
                     }
-
-
-
-                    $logo = $map[$i][$j] >= 100 ? $map[$i][$j] % 100 : $map[$i][$j];
-
-                    if (isset($logo_get_max[$logo]) && $logo_get_max[$logo] > 1 && $logo_get_max[$logo] >= $i + 1) {
-
+                    $cell = $map[$i][$j];
+                    $logo = $cell >= 100 ? $cell % 100 : $cell;
+                    $i_plus_1 = $i + 1;
+                    if (isset($logo_get_max[$logo]) && $logo_get_max[$logo] > 1 && $logo_get_max[$logo] >= $i_plus_1) {
                         $disappear[] = $i * 10 + $j;
-
-                        if ($map[$i][$j] <= BAIDA) {
-
+                        if ($cell <= BAIDA) {
                             unset($map[$i][$j]);
-
                         } else {
-
                             $map[$i][$j] = BAIDA;
-
                         }
-
-                    } elseif ($map[$i][$j] == BAIDA && max($logo_get_max) >= $i + 1) {
-
+                    } elseif ($cell == BAIDA && $max_chain >= $i_plus_1) {
                         $disappear[] = $i * 10 + $j;
-
                         unset($map[$i][$j]);
-
                     }
-
                 }
-
             }
-
         }
 
 
@@ -1532,53 +1386,27 @@ class Table
         $this->cur_result['double_arr'][] = $double;
 
         
-        if ((count($free_count) >= 3) || $this->force_free_trigger) {
-
-            $this->cur_result['getfree'] = (count($free_count) - 3) * 3 + 12;
-
-            $this->cur_result['free_logo'] = count($free_count);
+        $fcnt = count($free_count);
+        if ($fcnt >= 3 || $this->force_free_trigger) {
+            $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
+            $this->cur_result['free_logo'] = $fcnt;
             $this->force_free_trigger = false;
-            }
+        }
 
         if (!empty($disappear) && !empty($score)) {
-
-            $control = false;
-
-            if (array_sum($this->cur_result['score']) > 100 * $this->use || $double > 4 || $num > 4) {
-
-                $control = true;
-
-            }
-
-
-
-            $this->GetMap($num, $control);
-
+            $need_control = array_sum($this->cur_result['score']) > 100 * $this->use || $double > 4 || $num > 4;
+            $this->GetMap($num, $need_control);
         } else {
-
-            
-
             if (count($this->map) == 1 && mt_rand(1, 100) <= 50) {
-
                 for ($k = mt_rand(0, 3); $k > 0; $k--) {
-
                     $change_i = mt_rand(1, 3);
-
                     $change_j = mt_rand(0, 4);
-
-                    if ($this->map[0][$change_i][$change_j] < 100 && $this->map[0][$change_i][$change_j] != BAIDA) {
-
+                    $cell_val = $this->map[0][$change_i][$change_j];
+                    if ($cell_val < 100 && $cell_val != BAIDA) {
                         $this->map[0][$change_i][$change_j] += 100;
-
                     }
-
                 }
-
             }
-
-
-
-
         }
 
     }
