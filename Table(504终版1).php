@@ -581,18 +581,18 @@ class Table
 
         if ($need_boost_free_score) {
             if ($this->free_boom_max_double <= 90) {
-                // 第一档：单次爆45-90倍，最多重摇45次
-                $loop_max = 45;
+                // 第一档：单次爆45-90倍，最多重摇25次
+                $loop_max = 25;
             } elseif ($this->free_boom_max_double <= 130) {
-                // 第二档：单次爆80-130倍，最多重摇65次
-                $loop_max = 65;
+                // 第二档：单次爆80-130倍，最多重摇35次
+                $loop_max = 35;
             } else {
-                // 第三档：单次爆130-200倍，最多重摇120次
-                $loop_max = 120;
+                // 第三档：单次爆130-200倍，最多重摇55次
+                $loop_max = 55;
             }
         } else {
-            // 普通局只摇1次，免费普通转最多10次
-            $loop_max = $is_free_round ? 10 : 1;
+            // 普通局只摇1次，免费普通转最多5次
+            $loop_max = $is_free_round ? 5 : 1;
         }
         $best_free_score = -1;
         $best_free_map = [];
