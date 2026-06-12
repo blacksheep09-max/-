@@ -715,8 +715,8 @@ class Table
                 $boom_max_left = $new_free_count;
             }
 
-            if ($rand_free_prize <= 80) {
-                // 80% 大奖免费：整轮目标50-150倍，其中一转爆45-90倍
+            if ($rand_free_prize <= 85) {
+                // 85% 大奖免费：整轮目标50-150倍，其中一转爆45-90倍
                 $this->free_prize_level = 1;
                 $this->free_total_limit_double = 150;
                 $this->free_total_min_double = 50;
@@ -728,7 +728,7 @@ class Table
                 $this->free_extra_triggered = false;
 
             } elseif ($rand_free_prize <= 99) {
-                // 19% 超级免费：整轮目标80-180倍，其中一转爆80-130倍
+                // 14% 超级免费：整轮目标80-180倍，其中一转爆80-130倍
                 $this->free_prize_level = 1;
                 $this->free_total_limit_double = 180;
                 $this->free_total_min_double = 80;
