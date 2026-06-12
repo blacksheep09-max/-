@@ -539,59 +539,32 @@ class Table
 
         $is_free_round = ($this->free > 0 && $this->use > 0);
 
-            if ($this->free_prize_level == 0) {
-                // 普通免费备用档
-                $free_max_double = 15;
-                $free_reroll_min_double = 2;
-            } elseif ($this->free_prize_level == 1) {
-                // 大奖/超级免费：允许单次爆到130倍以内
-                $free_max_double = 130;
-                $free_reroll_min_double = 20;
-            } else {
-                // 爆奖免费：允许单次爆到200倍以内
-                $free_max_double = 300;
-                $free_reroll_min_double = 80;
-            }
-
         $use_val = $this->use;
-        $free_max_score = $is_free_round ? $use_val * $free_max_double : PHP_INT_MAX;
         $free_total_left_score = $is_free_round ? max(0, $use_val * $this->free_total_limit_double - $this->free_get) : PHP_INT_MAX;
-        $free_reroll_min_score = $is_free_round ? $use_val * $free_reroll_min_double : 0;
 
         // 判断当前这转是否是本轮免费指定的爆奖转
         $is_free_boom_round = $is_free_round && !$this->free_boom_used && $this->free_boom_left_count > 0 && $this->free == $this->free_boom_left_count;
-        $need_boost_free_score = $is_free_boom_round;
         $boost_min_score = 0;
         $boost_max_score = PHP_INT_MAX;
 
-        if ($need_boost_free_score) {
+        if ($is_free_boom_round) {
             $boost_min_score = $use_val * $this->free_boom_min_double;
             $boost_max_score = $use_val * $this->free_boom_max_double;
             $boost_max_score = min($boost_max_score, $free_total_left_score);
-            if ($boost_max_score < $boost_min_score) {
-                $boost_min_score = $boost_max_score;
-            }
         }
 
 
 
 
-        // 是否已经因为超过90倍而进入“保底重摇模式”
-        $need_free_reroll_guarantee = false;
-
-        if ($need_boost_free_score) {
+        if ($is_free_boom_round) {
             if ($this->free_boom_max_double <= 90) {
-                // 第一档：单次爆45-90倍，最多重摇25次
                 $loop_max = 25;
             } elseif ($this->free_boom_max_double <= 130) {
-                // 第二档：单次爆80-130倍，最多重摇35次
                 $loop_max = 35;
             } else {
-                // 第三档：单次爆130-200倍，最多重摇55次
                 $loop_max = 55;
             }
         } else {
-            // 普通局只摇1次，免费普通转最多5次
             $loop_max = $is_free_round ? 5 : 1;
         }
         $best_free_score = -1;
@@ -613,8 +586,6 @@ class Table
         ];
         for ($i = 0; $i < $loop_max; $i++) {
             
-
-
             $this->cur_result = $empty_cur_result;
             $this->map = [];
             $this->deal_map = [];
@@ -622,28 +593,19 @@ class Table
             $this->GetMap(0, $is_unset_logo, $logo_num);
 
             $total_score = array_sum($this->cur_result['score']);
-            // 记录爆奖转重摇中分数最高的结果
-            if ($need_boost_free_score && $total_score > $best_free_score) {
+            if ($is_free_boom_round && $total_score > $best_free_score) {
                 $best_free_score = $total_score;
                 $best_free_map = $this->map;
                 $best_free_deal_map = $this->deal_map;
                 $best_free_result = $this->cur_result;
             }
 
-            // 免费游戏：超过90倍则丢弃，并开启“30~90倍保底重摇模式”
-            if ($is_free_round && $total_score > $free_max_score) {
-             $need_free_reroll_guarantee = true;
-            continue;
-            }
-
-
-
-
+            // 免费游戏：超过整轮剩余额度则丢弃
             if ($is_free_round && $total_score > $free_total_left_score) {
                 continue;
             }
-            if ($need_boost_free_score) {
-                if ($boost_min_score > 0 && ($total_score < $boost_min_score || $total_score > $boost_max_score)) {
+            if ($is_free_boom_round) {
+                if ($total_score < $boost_min_score || $total_score > $boost_max_score) {
                     continue;
                 }
                 if ($total_score <= 0) {
@@ -659,13 +621,10 @@ class Table
                 break;
             }
 
-
-
-
         }
 
 
-        if ($need_boost_free_score && !$found_valid_free_map && $best_free_result !== null) {
+        if ($is_free_boom_round && !$found_valid_free_map && $best_free_result !== null) {
             $this->map = $best_free_map;
             $this->deal_map = $best_free_deal_map;
             $this->cur_result = $best_free_result;
@@ -675,19 +634,8 @@ class Table
         }
 
         $final_score = array_sum($this->cur_result['score']);
-        // 兜底：如果最终仍超过上限、超过累计剩余额度，或不满足补体验要求，则清空结果
-        if (
-            $is_free_round &&
-            (
-                $final_score > $free_max_score ||
-                $final_score > $free_total_left_score ||
-                (
-                    $need_free_reroll_guarantee &&
-                    $free_total_left_score >= $free_reroll_min_score &&
-                    $final_score < $free_reroll_min_score
-                )
-            )
-        ) {
+        // 兜底：免费游戏超过整轮剩余额度则清空结果
+        if ($is_free_round && $final_score > $free_total_left_score) {
             $this->cur_result['disappear'] = [];
             $this->cur_result['score'] = [];
             $this->cur_result['logo_info'] = [];
