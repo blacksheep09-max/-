@@ -60,7 +60,7 @@ define('DOUBLE', [
 
 
 
-define('POSSIBLE', [ERTONG => 50, ERTIAO => 50, SANTONG => 50, WUTONG => 30, WUTIAO => 30, BAWAN => 15, BAIBAN => 7, HONGZHONG => 3, FACAI => 1, FREE => 1]);
+define('POSSIBLE', [ERTONG => 50, ERTIAO => 50, SANTONG => 50, WUTONG => 30, WUTIAO => 30, BAWAN => 15, BAIBAN => 7, HONGZHONG => 3, FACAI => 1, FREE => 15]);
 
 
 
@@ -498,9 +498,6 @@ class Table
 
         $this->mapPossibleSum = [];
 
-        // 是否屏蔽数据库FREE权重（免费游戏通过源码保底机制获得，不依赖数据库控制）
-        $屏蔽FREE权重 = ($this->free <= 0);
-
         if ($has_free_map) {
 
             $this->mapPossible = $control_map[$control]['free_map'];
@@ -538,13 +535,6 @@ class Table
                 $this->wildPossible[$i] = ($i && $wild) ? ($wild[$i] ?? 0) : 0;
 
                 $this->mapPossibleSum[$i] = array_sum($this->mapPossible[$i]);
-
-                // 屏蔽数据库FREE权重控制（免费游戏通过源码保底机制获得）
-                if ($屏蔽FREE权重 && isset($this->mapPossible[$i][FREE])) {
-                    $free_weight = $this->mapPossible[$i][FREE];
-                    unset($this->mapPossible[$i][FREE]);
-                    $this->mapPossibleSum[$i] -= $free_weight;
-                }
 
             }
 
@@ -1135,27 +1125,6 @@ class Table
             $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
         }
 
-        // 随机触发免费游戏机制：在普通局无FREE图标时，根据累计局数计算触发概率
-        // 目标：约150次普通局触发一次免费游戏（配合保底的180次平均）
-        if (!$free && empty($free_count)) {
-            // 概率公式：P = 1 - exp(-n/112)，累积概率约63%时表示约112次
-            // 配合保底机制（约180次触发一次），整体约150次触发一次
-            $trigger_prob = 1 - exp(-$this->normal_round_count / 112);
-            if (mt_rand(1, 10000) / 10000.0 < $trigger_prob) {
-                // 触发免费游戏，放置3个FREE图标让玩家看到
-                $trigger_cols = [1, 2, 3, 4];
-                shuffle($trigger_cols);
-                for ($t = 0; $t < 3; $t++) {
-                    $tc = $trigger_cols[$t];
-                    $tr = mt_rand(0, 4);
-                    $map[$tc][$tr] = FREE;
-                    $free_count[] = $tc * 10 + $tr;
-                    $col_has_free[$tc] = true;
-                }
-                $this->normal_round_count = 0;
-                $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
-            }
-        }
         if ($free) {
             $golden_rand = mt_rand(1, 100);
             if ($golden_rand <= 45) {
