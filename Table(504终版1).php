@@ -159,8 +159,8 @@ class Table
     private $normal_round_count = 0;
     private $free_guarantee_threshold = 0;  
     private $is_free_guarantee = false;
-    private $free_guarantee_min = 135;
-    private $free_guarantee_max = 225;
+    private $free_guarantee_min = 140;
+    private $free_guarantee_max = 160;
     private $free_total_limit_double = 30; 
     private $free_total_min_double = 0;    // 当前这轮免费最低体验倍数
     private $free_prize_level = 0;  
@@ -1133,6 +1133,27 @@ class Table
             $this->is_free_guarantee = false;
             $this->normal_round_count = 0;
             $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
+        }
+
+        // 随机触发免费游戏机制：在普通局无FREE图标时，根据累计局数计算触发概率
+        // 目标：约150次普通局触发一次免费游戏
+        if (!$free && empty($free_count)) {
+            // 概率公式：P = 1 - exp(-n/150)，累积概率约63%时表示约150次
+            $trigger_prob = 1 - exp(-$this->normal_round_count / 150);
+            if (mt_rand(1, 10000) / 10000.0 < $trigger_prob) {
+                // 触发免费游戏，放置3个FREE图标让玩家看到
+                $trigger_cols = [1, 2, 3, 4];
+                shuffle($trigger_cols);
+                for ($t = 0; $t < 3; $t++) {
+                    $tc = $trigger_cols[$t];
+                    $tr = mt_rand(0, 4);
+                    $map[$tc][$tr] = FREE;
+                    $free_count[] = $tc * 10 + $tr;
+                    $col_has_free[$tc] = true;
+                }
+                $this->normal_round_count = 0;
+                $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
+            }
         }
         if ($free) {
             $golden_rand = mt_rand(1, 100);
