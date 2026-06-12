@@ -157,8 +157,9 @@ class Table
 
 
     private $normal_round_count = 0;
-    private $free_guarantee_threshold = 0;  
+    private $free_guarantee_threshold = 0;
     private $is_free_guarantee = false;
+    private $is_guarantee_free_trigger = false; // 标记是否由保底触发的免费游戏
     private $free_guarantee_min = 135;
     private $free_guarantee_max = 225;
     private $free_total_limit_double = 30; 
@@ -1108,16 +1109,15 @@ class Table
         $golden_columns = [];
         $col_is_golden = [false, false, false, false, false];
         if ($this->is_free_guarantee) {
-            $candidate_cols = [1, 2, 3];
-            $candidate_rows = [1, 2, 3];
+            $candidate_cols = [1, 2, 3, 4];
             shuffle($candidate_cols);
-            shuffle($candidate_rows);
-            for ($k = 0; $k < 3; $k++) {
+            for ($k = 0; $k < 4; $k++) {
                 $col = $candidate_cols[$k];
-                $row = $candidate_rows[$k];
+                $row = mt_rand(0, 4);
                 $map[$col][$row] = FREE;
                 $free_count[] = $col * 10 + $row;
             }
+            $this->is_guarantee_free_trigger = true;
             $this->is_free_guarantee = false;
             $this->normal_round_count = 0;
             $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
@@ -1444,8 +1444,16 @@ class Table
 
         $fcnt = count($free_count);
         if ($fcnt >= 3) {
-            $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
-            $this->cur_result['free_logo'] = $fcnt;
+            if ($this->is_guarantee_free_trigger) {
+                // 保底FREE：4个FREE，给15次
+                $this->cur_result['getfree'] = 15;
+                $this->cur_result['free_logo'] = 4;
+            } else {
+                // 随机FREE：按公式计算（3个12次，4个15次，5个18次...）
+                $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
+                $this->cur_result['free_logo'] = $fcnt;
+            }
+            $this->is_guarantee_free_trigger = false;
         }
 
         if (!empty($disappear) && !empty($score)) {
