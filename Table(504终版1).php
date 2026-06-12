@@ -165,6 +165,7 @@ class Table
     private $free_boom_min_double = 0;      // 爆奖转最低倍数
     private $free_boom_max_double = 0;      // 爆奖转最高倍数
     private $free_boom_used = false;        // 本轮免费是否已经爆过
+    private $free_extra_triggered = false;  // 本轮免费是否已经触发过补12次机制
 
     private $guarantee_bet_gold = 0;
     private $guarantee_bet_double = 0;
@@ -724,6 +725,7 @@ class Table
                 $this->free_boom_min_double = 45;
                 $this->free_boom_max_double = 90;
                 $this->free_boom_used = false;
+                $this->free_extra_triggered = false;
 
             } elseif ($rand_free_prize <= 99) {
                 // 14% 超级免费：整轮目标80-180倍，其中一转爆80-130倍
@@ -735,6 +737,7 @@ class Table
                 $this->free_boom_min_double = 80;
                 $this->free_boom_max_double = 130;
                 $this->free_boom_used = false;
+                $this->free_extra_triggered = false;
 
             } else {
                 // 1% 爆奖免费：整轮目标150-250倍，其中一转爆130-200倍
@@ -746,6 +749,7 @@ class Table
                 $this->free_boom_min_double = 180;
                 $this->free_boom_max_double = 300;
                 $this->free_boom_used = false;
+                $this->free_extra_triggered = false;
             }
         }
 
@@ -1136,6 +1140,27 @@ class Table
             $golden_columns = array_slice($available_cols, 0, $golden_count);
             foreach ($golden_columns as $gc) {
                 $col_is_golden[$gc] = true;
+            }
+
+            // 补12次机制：最后剩2轮时，如果累计没达到整轮最低倍数，强制给3个FREE
+            if (!$this->free_extra_triggered && $this->free == 2 && $this->free_total_min_double > 0 && $this->use > 0 && $this->free_get < $this->use * $this->free_total_min_double) {
+                for ($i = 0; $i < 5; $i++) {
+                    for ($j = 0; $j < 6; $j++) {
+                        if (isset($map[$i][$j]) && $map[$i][$j] == FREE) {
+                            $map[$i][$j] = 0;
+                        }
+                    }
+                }
+                $free_count = [];
+                $extra_cols = [1, 2, 3, 4];
+                shuffle($extra_cols);
+                for ($k = 0; $k < 3; $k++) {
+                    $col = $extra_cols[$k];
+                    $row = mt_rand(0, 4);
+                    $map[$col][$row] = FREE;
+                    $free_count[] = $col * 10 + $row;
+                }
+                $this->free_extra_triggered = true;
             }
         }
 
