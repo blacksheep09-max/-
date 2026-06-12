@@ -152,10 +152,6 @@ class Table
 
 
 
-    private $next_free_count = 999;  
-
-
-
     private $normal_round_count = 0;
     private $free_guarantee_threshold = 0;
     private $is_free_guarantee = false;
@@ -538,23 +534,6 @@ class Table
             }
 
         }
-
-
-
-        if ($control >= 0) {
-
-            $this->next_free_count--;
-
-        }
-
-
-
-        if (isset($control_map[$control]['free_cirle']) && $this->next_free_count > $control_map[$control]['free_cirle'] || $use <= 0 || $control < 0) {
-
-            $this->next_free_count = max($control_map[$control]['free_cirle'] ?? 0, 50);
-
-        }
-
 
 
 
@@ -1172,11 +1151,11 @@ class Table
                         unset($possible[FREE]);
                     }
 
-                    // 普通局且前50局内：限制最多2个FREE，避免提前触发免费游戏
-                    if ($this->free <= 0 && $this->next_free_count > 0) {
+                    // 普通局：限制最多2个FREE，不会达到3个触发免费游戏
+                    if ($this->free <= 0) {
                         if ($free_cnt_val >= 2) {
                             unset($possible[FREE]);
-                        } elseif (isset($possible[FREE]) && mt_rand(1, 100) > 30) {
+                        } elseif (isset($possible[FREE]) && mt_rand(1, 100) > 25) {
                             unset($possible[FREE]);
                         }
                     }
@@ -1260,19 +1239,6 @@ class Table
                     }
 
                 }
-
-            }
-
-
-
-            if (!$col_has_free[$i] && empty($this->map) && $this->next_free_count <= 0 && mt_rand(1, 100) <= 80 && count($free_count) < 3) {
-
-                $_index = mt_rand(0, 4);
-
-                $map[$i][$_index] = FREE;
-
-                $free_count[] = $i * 10 + $_index;
-                $col_has_free[$i] = true;
 
             }
 
