@@ -1449,8 +1449,9 @@ class Table
                 $this->cur_result['getfree'] = 15;
                 $this->cur_result['free_logo'] = 4;
             } else {
-                // 随机FREE：按公式计算（3个12次，4个15次，5个18次...）
-                $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
+                // 随机FREE：最多3个FREE，给12次
+                $fcnt = min($fcnt, 3);
+                $this->cur_result['getfree'] = 12;
                 $this->cur_result['free_logo'] = $fcnt;
             }
             $this->is_guarantee_free_trigger = false;
