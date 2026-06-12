@@ -1444,10 +1444,9 @@ class Table
 
 
         $fcnt = count($free_count);
-        if ($fcnt >= 3 || $this->force_free_trigger) {
+        if ($fcnt >= 3) {
             $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
             $this->cur_result['free_logo'] = $fcnt;
-            $this->force_free_trigger = false;
         }
 
         if (!empty($disappear) && !empty($score)) {
