@@ -178,7 +178,7 @@ class Table
 
     // 亏损补助机制
     private $loss_compensate_count = 0;          // 延迟几局触发免费游戏
-    private $loss_compensate_min_round = 400;    // 最少普通局次数
+    private $loss_compensate_min_round = 300;    // 最少普通局次数
     private $loss_compensate_return_rate = 0.70; // 返奖率阈值（低于此值触发）
     private $total_bet = 0;                       // 累计投入
     private $total_win = 0;                       // 累计得分
