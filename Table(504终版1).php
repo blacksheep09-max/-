@@ -611,14 +611,14 @@ class Table
 
         if ($need_boost_free_score) {
             if ($this->free_boom_max_double <= 90) {
-                // 第一档：单次爆45-90倍，最多重摇30次
-                $loop_max = 30;
+                // 第一档：单次爆45-90倍，最多重摇45次
+                $loop_max = 45;
             } elseif ($this->free_boom_max_double <= 130) {
-                // 第二档：单次爆80-130倍，最多重摇40次
-                $loop_max = 40;
+                // 第二档：单次爆80-130倍，最多重摇65次
+                $loop_max = 65;
             } else {
-                // 第三档：单次爆130-200倍，最多重摇50次
-                $loop_max = 80;
+                // 第三档：单次爆130-200倍，最多重摇120次
+                $loop_max = 120;
             }
         } else {
             // 普通局只摇1次，免费普通转最多10次
