@@ -176,6 +176,13 @@ class Table
     private $guarantee_bet_double = 0;
     private $guarantee_count = 0;
 
+    // 亏损补助机制
+    private $loss_compensate_count = 0;          // 延迟几局触发免费游戏
+    private $loss_compensate_min_round = 400;    // 最少普通局次数
+    private $loss_compensate_return_rate = 0.70; // 返奖率阈值（低于此值触发）
+    private $total_bet = 0;                       // 累计投入
+    private $total_win = 0;                       // 累计得分
+
     // 控制数据缓存（静态缓存避免重复查询数据库）
     private static $controlMapCache = [];
     private static $controlMapCacheTime = [];
@@ -895,15 +902,39 @@ class Table
 
         // 只有付费普通局才参与免费保底计数
         if ($use > 0 && $this->free <= 0) {
+            // 累计投入和得分
+            $this->total_bet += $use;
+            $this->total_win += $user_win;
+
             // 本次普通局触发了免费游戏
             if ($this->cur_result['getfree'] > 0) {
                 // 重置计数和保底阈值
                 $this->normal_round_count = 0;
                 $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
                 $this->is_free_guarantee = false;
+                // 重置亏损补助数据
+                $this->total_bet = 0;
+                $this->total_win = 0;
+                $this->loss_compensate_count = 0;
             } else {
                 // 普通局未触发免费游戏，次数+1
                 $this->normal_round_count++;
+
+                // 亏损补助延迟触发检测
+                if ($this->loss_compensate_count > 0) {
+                    $this->loss_compensate_count--;
+                    if ($this->loss_compensate_count == 0) {
+                        // 延迟结束，强制触发免费游戏
+                        $this->force_free_trigger = true;
+                    }
+                } elseif ($this->normal_round_count >= $this->loss_compensate_min_round && $this->total_bet > 0) {
+                    // 满足最少局数条件，检测返奖率
+                    $return_rate = $this->total_win / $this->total_bet;
+                    if ($return_rate < $this->loss_compensate_return_rate) {
+                        // 返奖率低于70%，延迟3局触发免费游戏
+                        $this->loss_compensate_count = 3;
+                    }
+                }
 
                 // 达到随机阈值，标记触发保底
                 if ($this->normal_round_count >= $this->free_guarantee_threshold) {
@@ -1133,6 +1164,23 @@ class Table
             $this->is_free_guarantee = false;
             $this->normal_round_count = 0;
             $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
+        }
+
+        // 亏损补助触发：强制放置3个FREE图标
+        if ($this->force_free_trigger) {
+            $candidate_cols = [1, 2, 3, 4];
+            shuffle($candidate_cols);
+            for ($k = 0; $k < 3; $k++) {
+                $col = $candidate_cols[$k];
+                $row = mt_rand(0, 4);
+                $map[$col][$row] = FREE;
+                $free_count[] = $col * 10 + $row;
+            }
+            $this->force_free_trigger = false;
+            // 重置亏损补助数据
+            $this->total_bet = 0;
+            $this->total_win = 0;
+            $this->loss_compensate_count = 0;
         }
 
         if ($free) {
