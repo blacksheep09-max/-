@@ -1122,18 +1122,13 @@ class Table
         }
 
         if ($free) {
-            $is_boom_round = !$this->free_boom_used && $this->free_boom_left_count > 0 && $this->free == $this->free_boom_left_count;
-            if ($is_boom_round) {
-                $golden_count = 3;
+            $golden_rand = mt_rand(1, 100);
+            if ($golden_rand <= 45) {
+                $golden_count = 1;
+            } elseif ($golden_rand <= 80) {
+                $golden_count = 2;
             } else {
-                $golden_rand = mt_rand(1, 100);
-                if ($golden_rand <= 45) {
-                    $golden_count = 1;
-                } elseif ($golden_rand <= 80) {
-                    $golden_count = 2;
-                } else {
-                    $golden_count = 3;
-                }
+                $golden_count = 3;
             }
             $available_cols = [1, 2, 3];
             shuffle($available_cols);
