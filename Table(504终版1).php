@@ -155,7 +155,6 @@ class Table
     private $normal_round_count = 0;
     private $free_guarantee_threshold = 0;
     private $is_free_guarantee = false;
-    private $is_guarantee_free_trigger = false; // 标记是否由保底触发的免费游戏
     private $free_guarantee_min = 50;
     private $free_guarantee_max = 250;
     private $free_total_limit_double = 30; 
@@ -1097,16 +1096,22 @@ class Table
                 }
             }
             $free_count = [];
-            // 精确放4个FREE触发免费游戏（4个FREE = 12 + (4-3)*3 = 15次）
+            // 根据保底次数决定FREE数量：
+            // 50-150局给3个FREE(12次),151-250局给4个FREE(15次)
+            $threshold = ($this->free_guarantee_min + $this->free_guarantee_max) / 2;
+            if ($this->normal_round_count <= $threshold) {
+                $free_count_place = 3;
+            } else {
+                $free_count_place = 4;
+            }
             $candidate_cols = [1, 2, 3, 4];
             shuffle($candidate_cols);
-            for ($k = 0; $k < 4; $k++) {
+            for ($k = 0; $k < $free_count_place; $k++) {
                 $col = $candidate_cols[$k];
                 $row = mt_rand(0, 4);
                 $map[$col][$row] = FREE;
                 $free_count[] = $col * 10 + $row;
             }
-            $this->is_guarantee_free_trigger = true;
             $this->is_free_guarantee = false;
             $this->normal_round_count = 0;
             $this->free_guarantee_threshold = mt_rand($this->free_guarantee_min, $this->free_guarantee_max);
@@ -1424,7 +1429,6 @@ class Table
             // 保底局精确4个FREE=15次
             $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
             $this->cur_result['free_logo'] = $fcnt;
-            $this->is_guarantee_free_trigger = false;
         }
 
         if (!empty($disappear) && !empty($score)) {
