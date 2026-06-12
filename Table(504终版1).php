@@ -156,8 +156,8 @@ class Table
     private $free_guarantee_threshold = 0;
     private $is_free_guarantee = false;
     private $is_guarantee_free_trigger = false; // 标记是否由保底触发的免费游戏
-    private $free_guarantee_min = 135;
-    private $free_guarantee_max = 225;
+    private $free_guarantee_min = 50;
+    private $free_guarantee_max = 250;
     private $free_total_limit_double = 30; 
     private $free_total_min_double = 0;    // 当前这轮免费最低体验倍数
     private $free_prize_level = 0;  
