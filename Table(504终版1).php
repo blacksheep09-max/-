@@ -498,6 +498,9 @@ class Table
 
         $this->mapPossibleSum = [];
 
+        // 是否屏蔽数据库FREE权重（免费游戏通过源码保底机制获得，不依赖数据库控制）
+        $屏蔽FREE权重 = ($this->free <= 0);
+
         if ($has_free_map) {
 
             $this->mapPossible = $control_map[$control]['free_map'];
@@ -535,6 +538,13 @@ class Table
                 $this->wildPossible[$i] = ($i && $wild) ? ($wild[$i] ?? 0) : 0;
 
                 $this->mapPossibleSum[$i] = array_sum($this->mapPossible[$i]);
+
+                // 屏蔽数据库FREE权重控制（免费游戏通过源码保底机制获得）
+                if ($屏蔽FREE权重 && isset($this->mapPossible[$i][FREE])) {
+                    $free_weight = $this->mapPossible[$i][FREE];
+                    unset($this->mapPossible[$i][FREE]);
+                    $this->mapPossibleSum[$i] -= $free_weight;
+                }
 
             }
 
