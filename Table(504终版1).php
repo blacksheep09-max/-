@@ -1088,6 +1088,16 @@ class Table
         $golden_columns = [];
         $col_is_golden = [false, false, false, false, false];
         if ($this->is_free_guarantee) {
+            // 先清除地图上所有已有的FREE（权重随机生成的）
+            for ($i = 0; $i < 5; $i++) {
+                for ($j = 0; $j < 6; $j++) {
+                    if (isset($map[$i][$j]) && $map[$i][$j] == FREE) {
+                        $map[$i][$j] = 0;
+                    }
+                }
+            }
+            $free_count = [];
+            // 精确放4个FREE触发免费游戏（4个FREE = 12 + (4-3)*3 = 15次）
             $candidate_cols = [1, 2, 3, 4];
             shuffle($candidate_cols);
             for ($k = 0; $k < 4; $k++) {
@@ -1410,16 +1420,10 @@ class Table
 
         $fcnt = count($free_count);
         if ($fcnt >= 3) {
-            if ($this->is_guarantee_free_trigger) {
-                // 保底FREE：4个FREE，给15次
-                $this->cur_result['getfree'] = 15;
-                $this->cur_result['free_logo'] = 4;
-            } else {
-                // 随机FREE：最多3个FREE，给12次
-                $fcnt = min($fcnt, 3);
-                $this->cur_result['getfree'] = 12;
-                $this->cur_result['free_logo'] = $fcnt;
-            }
+            // 3个FREE=12次，每多1个FREE多3次
+            // 保底局精确4个FREE=15次
+            $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
+            $this->cur_result['free_logo'] = $fcnt;
             $this->is_guarantee_free_trigger = false;
         }
 
