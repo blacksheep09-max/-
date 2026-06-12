@@ -176,6 +176,38 @@ class Table
     private $guarantee_bet_double = 0;
     private $guarantee_count = 0;
 
+    // 控制数据缓存（静态缓存避免重复查询数据库）
+    private static $controlMapCache = [];
+    private static $controlMapCacheTime = [];
+    private static $controlInfoCache = [];
+    private static $controlInfoCacheTime = [];
+    private const CACHE_TTL = 5; // 缓存5秒
+
+    // 获取带缓存的ControlMap
+    private function getCachedControlMap($uid, $gtype, $level) {
+        $key = "{$uid}_{$gtype}_{$level}";
+        $now = time();
+        if (isset(self::$controlMapCache[$key]) && isset(self::$controlMapCacheTime[$key]) && ($now - self::$controlMapCacheTime[$key]) < self::CACHE_TTL) {
+            return self::$controlMapCache[$key];
+        }
+        $result = DBInstance::GetControlMap($uid, $gtype, $level);
+        self::$controlMapCache[$key] = $result;
+        self::$controlMapCacheTime[$key] = $now;
+        return $result;
+    }
+
+    // 获取带缓存的ControlInfo
+    private function getCachedControlInfo($control) {
+        $now = time();
+        if (isset(self::$controlInfoCache[$control]) && isset(self::$controlInfoCacheTime[$control]) && ($now - self::$controlInfoCacheTime[$control]) < self::CACHE_TTL) {
+            return self::$controlInfoCache[$control];
+        }
+        $result = DBInstance::GetControlInfo('control_mjhlt', ['level' => $control]);
+        self::$controlInfoCache[$control] = $result;
+        self::$controlInfoCacheTime[$control] = $now;
+        return $result;
+    }
+
 
 
     
@@ -446,13 +478,13 @@ class Table
 
 
 
-        $logo_num = DBInstance::GetControlMap($this->uid, $this->roomRule['gtype'], $this->roomRule['level']);
+        $logo_num = $this->getCachedControlMap($this->uid, $this->roomRule['gtype'], $this->roomRule['level']);
 
         $level_index = $this->betGold * $this->betDouble;
 
         $control = $logo_num ? -2 : DBInstance::GetLBControl($this->uid, $this->roomRule['gtype'], Logic::$betLevel[$level_index]);//(add)
 
-        $control_map = DBInstance::GetControlInfo('control_mjhlt', ['level' => $control]);
+        $control_map = $this->getCachedControlInfo($control);
 
         $this->mapPossible = [];
 
@@ -1076,6 +1108,7 @@ class Table
         }
 
         $golden_columns = [];
+        $col_is_golden = [false, false, false, false, false];
         if ($this->is_free_guarantee) {
             $candidate_cols = [1, 2, 3];
             $candidate_rows = [1, 2, 3];
@@ -1103,20 +1136,35 @@ class Table
             $available_cols = [1, 2, 3];
             shuffle($available_cols);
             $golden_columns = array_slice($available_cols, 0, $golden_count);
+            foreach ($golden_columns as $gc) {
+                $col_is_golden[$gc] = true;
+            }
         }
 
         $col_has_free = [false, false, false, false, false];
         for ($i = 0; $i < 5; $i++) {
             if (!empty($map[$i])) {
-                $col_has_free[$i] = in_array(FREE, $map[$i]);
+                foreach ($map[$i] as $cell) {
+                    if ($cell == FREE) {
+                        $col_has_free[$i] = true;
+                        break;
+                    }
+                }
             }
+        }
+
+        $possible_base = [];
+        for ($i = 0; $i < 5; $i++) {
+            $p = $this->mapPossible[$i];
+            unset($p[BAIDA]);
+            $possible_base[$i] = $p;
+            $possible_base_sum[$i] = array_sum($p);
         }
 
         for ($i = 0; $i < 5; $i++) {
             for ($j = 0; $j < 6; $j++) {
                 if (!isset($map[$i][$j])) {
-                    $possible = $this->mapPossible[$i];
-                    unset($possible[BAIDA]);
+                    $possible = $possible_base[$i];
 
                     $free_cnt_val = count($free_count);
                     if ($free_cnt_val > 4
@@ -1153,16 +1201,14 @@ class Table
 
                     if (empty($possible)) {
 
-                        $possible = $this->mapPossible[$i];
+                        $possible = $possible_base[$i];
 
                     }
 
 
 
                     $sum = array_sum($possible);
-
                     $rand = mt_rand(1, $sum);
-
                     $_flag = 0;
 
 
@@ -1188,12 +1234,12 @@ class Table
                             if ($key == FREE) {
 
                                 $free_count[] = $i * 10 + $j;
-
+                                $col_has_free[$i] = true;
                             }
 
 
 
-                            if ($free && in_array($i, $golden_columns) && $key != FREE && $key != BAIDA) {
+                            if ($free && $col_is_golden[$i] && $key != FREE && $key != BAIDA) {
                                 $map[$i][$j] += 100;
                             } elseif ($i && $i != 4 && $key != FREE && mt_rand(1, WILD_PERCENT) <= $this->wildPossible[$i] && $num <= 3 && !$control) {
                                 $map[$i][$j] += 100;
@@ -1211,13 +1257,14 @@ class Table
 
 
 
-            if (!in_array(FREE, $map[$i]) && empty($this->map) && $this->next_free_count <= 0 && mt_rand(1, 100) <= 80 && count($free_count) < 4) {
+            if (!$col_has_free[$i] && empty($this->map) && $this->next_free_count <= 0 && mt_rand(1, 100) <= 80 && count($free_count) < 4) {
 
                 $_index = mt_rand(0, 4);
 
                 $map[$i][$_index] = FREE;
 
                 $free_count[] = $i * 10 + $_index;
+                $col_has_free[$i] = true;
 
             }
 
@@ -1379,13 +1426,14 @@ class Table
 
         $this->cur_result['logo_info'][] = $logo_info;
 
-        $this->cur_result['cur_gold'][] = $this->userInfo['gold'] + array_sum($this->cur_result['score']);
+        $prev_score_sum = array_sum($this->cur_result['score']);
+        $this->cur_result['cur_gold'][] = $this->userInfo['gold'] + $prev_score_sum;
 
         $this->cur_result['cur_time'][] = MyTools::GET_NOW();
 
         $this->cur_result['double_arr'][] = $double;
 
-        
+
         $fcnt = count($free_count);
         if ($fcnt >= 3 || $this->force_free_trigger) {
             $this->cur_result['getfree'] = ($fcnt - 3) * 3 + 12;
@@ -1394,7 +1442,7 @@ class Table
         }
 
         if (!empty($disappear) && !empty($score)) {
-            $need_control = array_sum($this->cur_result['score']) > 100 * $this->use || $double > 4 || $num > 4;
+            $need_control = $prev_score_sum > 100 * $this->use || $double > 4 || $num > 4;
             $this->GetMap($num, $need_control);
         } else {
             if (count($this->map) == 1 && mt_rand(1, 100) <= 50) {
