@@ -1123,9 +1123,9 @@ class Table
 
         if ($free) {
             $golden_rand = mt_rand(1, 100);
-            if ($golden_rand <= 45) {
+            if ($golden_rand <= 30) {
                 $golden_count = 1;
-            } elseif ($golden_rand <= 80) {
+            } elseif ($golden_rand <= 70) {
                 $golden_count = 2;
             } else {
                 $golden_count = 3;
