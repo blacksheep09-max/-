@@ -1056,11 +1056,17 @@ class Table
             } else {
                 $free_count_place = 4;
             }
-            $candidate_cols = [1, 2, 3, 4];
-            shuffle($candidate_cols);
+            // 只在中间3列放置FREE（第4列第4行会被getResult跳过，避免计数错误）
+            $free_positions = [];
+            for ($i = 1; $i <= 3; $i++) {
+                for ($j = 0; $j <= 4; $j++) {
+                    $free_positions[] = [$i, $j];
+                }
+            }
+            shuffle($free_positions);
             for ($k = 0; $k < $free_count_place; $k++) {
-                $col = $candidate_cols[$k];
-                $row = mt_rand(0, 4);
+                $col = $free_positions[$k][0];
+                $row = $free_positions[$k][1];
                 $map[$col][$row] = FREE;
                 $free_count[] = $col * 10 + $row;
             }
@@ -1095,11 +1101,17 @@ class Table
                     }
                 }
                 $free_count = [];
-                $extra_cols = [1, 2, 3, 4];
-                shuffle($extra_cols);
+                // 只在中间3列放置FREE，避免第4列第4行被跳过
+                $extra_positions = [];
+                for ($i = 1; $i <= 3; $i++) {
+                    for ($j = 0; $j <= 4; $j++) {
+                        $extra_positions[] = [$i, $j];
+                    }
+                }
+                shuffle($extra_positions);
                 for ($k = 0; $k < 3; $k++) {
-                    $col = $extra_cols[$k];
-                    $row = mt_rand(0, 4);
+                    $col = $extra_positions[$k][0];
+                    $row = $extra_positions[$k][1];
                     $map[$col][$row] = FREE;
                     $free_count[] = $col * 10 + $row;
                 }
