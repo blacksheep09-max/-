@@ -1076,14 +1076,9 @@ class Table
         }
 
         if ($free) {
-            $golden_rand = mt_rand(1, 100);
-            if ($golden_rand <= 30) {
-                $golden_count = 1;
-            } elseif ($golden_rand <= 70) {
-                $golden_count = 2;
-            } else {
-                $golden_count = 3;
-            }
+            // 固定1列金色列；爆奖转固定3列金色列
+            $is_boom = !$this->free_boom_used && $this->free_boom_left_count > 0 && $this->free == $this->free_boom_left_count;
+            $golden_count = $is_boom ? 3 : 1;
             $available_cols = [1, 2, 3];
             shuffle($available_cols);
             $golden_columns = array_slice($available_cols, 0, $golden_count);
