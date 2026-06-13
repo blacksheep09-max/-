@@ -663,8 +663,8 @@ class Table
                 $boom_max_left = $new_free_count;
             }
 
-            if ($rand_free_prize <= 85) {
-                // 85% 大奖免费：整轮目标50-150倍，其中一转爆45-90倍
+            if ($rand_free_prize <= 90) {
+                // 90% 大奖免费：整轮目标50-150倍，其中一转爆45-90倍
                 $this->free_prize_level = 1;
                 $this->free_total_limit_double = 150;
                 $this->free_total_min_double = 50;
