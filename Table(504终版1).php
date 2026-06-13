@@ -697,6 +697,7 @@ class Table
             }
 
             $this->free += $this->cur_result['getfree'];
+        }
 
         $this->all_free += $this->cur_result['getfree'];
 
