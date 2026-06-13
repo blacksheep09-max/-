@@ -1150,8 +1150,16 @@ class Table
                     if ($this->free <= 0) {
                         if ($free_cnt_val >= 2) {
                             unset($possible[FREE]);
-                        } elseif (isset($possible[FREE]) && mt_rand(1, 100) > 55) {
-                            unset($possible[FREE]);
+                        } elseif ($free_cnt_val == 1) {
+                            // 已有1个FREE，相对容易出第2个
+                            if (isset($possible[FREE]) && mt_rand(1, 100) > 45) {
+                                unset($possible[FREE]);
+                            }
+                        } else {
+                            // 还没有FREE，较难出第一个
+                            if (isset($possible[FREE]) && mt_rand(1, 100) > 15) {
+                                unset($possible[FREE]);
+                            }
                         }
                     }
 
