@@ -156,7 +156,7 @@ class Table
     private $free_guarantee_threshold = 0;
     private $is_free_guarantee = false;
     private $free_guarantee_min = 50;
-    private $free_guarantee_max = 250;
+    private $free_guarantee_max = 350;
     private $free_total_limit_double = 30; 
     private $free_total_min_double = 0;    // 当前这轮免费最低体验倍数
     private $free_prize_level = 0;  
