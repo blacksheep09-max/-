@@ -1100,6 +1100,10 @@ class Table
                     $map[$col][$row] = FREE;
                     $free_count[] = $col * 10 + $row;
                 }
+                // 重置爆奖转：补的12次中间段再给一次爆奖转机会
+                // free从2变成14，爆奖转位置取 free=14 的中间段：4 ~ 11
+                $this->free_boom_used = false;
+                $this->free_boom_left_count = mt_rand(4, 11);
             }
         }
 
