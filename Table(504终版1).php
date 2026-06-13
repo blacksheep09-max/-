@@ -1086,30 +1086,13 @@ class Table
                 $col_is_golden[2] = true;
             }
 
-            // 补12次机制：最后剩2轮时，如果累计没达到整轮最低倍数，强制给3个FREE
+            // 补18次机制：最后剩2轮时，如果累计没达到整轮最低倍数，直接增加18次免费游戏（不显示FREE图标，无视觉突兀）
             if (!$this->free_extra_triggered && $this->free == 2 && $this->free_total_min_double > 0 && $this->use > 0 && $this->free_get < $this->use * $this->free_total_min_double) {
-                for ($i = 0; $i < 5; $i++) {
-                    for ($j = 0; $j < 6; $j++) {
-                        if (isset($map[$i][$j]) && $map[$i][$j] == FREE) {
-                            $map[$i][$j] = 0;
-                        }
-                    }
+                // 直接增加免费次数，不放FREE图标，避免视觉突兀
+                if (!isset($this->cur_result['getfree'])) {
+                    $this->cur_result['getfree'] = 0;
                 }
-                $free_count = [];
-                // 只在中间3列放置FREE，避免第4列第4行被跳过
-                $extra_positions = [];
-                for ($i = 1; $i <= 3; $i++) {
-                    for ($j = 0; $j <= 4; $j++) {
-                        $extra_positions[] = [$i, $j];
-                    }
-                }
-                shuffle($extra_positions);
-                for ($k = 0; $k < 3; $k++) {
-                    $col = $extra_positions[$k][0];
-                    $row = $extra_positions[$k][1];
-                    $map[$col][$row] = FREE;
-                    $free_count[] = $col * 10 + $row;
-                }
+                $this->cur_result['getfree'] += 18;
                 $this->free_extra_triggered = true;
             }
         }
