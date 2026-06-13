@@ -165,7 +165,6 @@ class Table
     private $free_boom_min_double = 0;      // 爆奖转最低倍数
     private $free_boom_max_double = 0;      // 爆奖转最高倍数
     private $free_boom_used = false;        // 本轮免费是否已经爆过
-    private $free_extra_triggered = false;  // 本轮免费是否已经触发过补12次机制
 
     private $guarantee_bet_gold = 0;
     private $guarantee_bet_double = 0;
@@ -673,7 +672,6 @@ class Table
                 $this->free_boom_min_double = 45;
                 $this->free_boom_max_double = 90;
                 $this->free_boom_used = false;
-                $this->free_extra_triggered = false;
 
             } elseif ($rand_free_prize <= 99) {
                 // 14% 超级免费：整轮目标80-180倍，其中一转爆80-130倍
@@ -685,7 +683,6 @@ class Table
                 $this->free_boom_min_double = 80;
                 $this->free_boom_max_double = 130;
                 $this->free_boom_used = false;
-                $this->free_extra_triggered = false;
 
             } else {
                 // 1% 爆奖免费：整轮目标200-400倍，其中一转爆180-300倍
@@ -697,17 +694,9 @@ class Table
                 $this->free_boom_min_double = 180;
                 $this->free_boom_max_double = 300;
                 $this->free_boom_used = false;
-                $this->free_extra_triggered = false;
             }
-        }
 
-        if ($this->free > 0) {
-
-            $this->free--;
-
-        }
-
-        $this->free += $this->cur_result['getfree'];
+            $this->free += $this->cur_result['getfree'];
 
         $this->all_free += $this->cur_result['getfree'];
 
@@ -1086,8 +1075,8 @@ class Table
                 $col_is_golden[2] = true;
             }
 
-            // 补18次机制：最后剩2轮时，如果累计没达到整轮最低倍数，强制给5个FREE触发免费游戏→获得18次额外机会
-            if (!$this->free_extra_triggered && $this->free == 2 && $this->free_total_min_double > 0 && $this->use > 0 && $this->free_get < $this->use * $this->free_total_min_double) {
+            // 补12次机制：最后剩2轮时，如果累计没达到整轮最低倍数，强制给3个FREE触发免费游戏→获得12次额外机会（可循环检测）
+            if ($this->free == 2 && $this->free_total_min_double > 0 && $this->use > 0 && $this->free_get < $this->use * $this->free_total_min_double) {
                 // 清除地图上已有的FREE
                 for ($i = 0; $i < 5; $i++) {
                     for ($j = 0; $j < 6; $j++) {
@@ -1096,7 +1085,7 @@ class Table
                         }
                     }
                 }
-                // 5个FREE = (5-3)*3+12 = 18次额外免费游戏
+                // 3个FREE = (3-3)*3+12 = 12次额外免费游戏
                 $free_count = [];
                 $extra_positions = [];
                 for ($i = 1; $i <= 3; $i++) {
@@ -1105,13 +1094,12 @@ class Table
                     }
                 }
                 shuffle($extra_positions);
-                for ($k = 0; $k < 5; $k++) {
+                for ($k = 0; $k < 3; $k++) {
                     $col = $extra_positions[$k][0];
                     $row = $extra_positions[$k][1];
                     $map[$col][$row] = FREE;
                     $free_count[] = $col * 10 + $row;
                 }
-                $this->free_extra_triggered = true;
             }
         }
 
