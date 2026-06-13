@@ -1155,7 +1155,7 @@ class Table
                     if ($this->free <= 0) {
                         if ($free_cnt_val >= 2) {
                             unset($possible[FREE]);
-                        } elseif (isset($possible[FREE]) && mt_rand(1, 100) > 25) {
+                        } elseif (isset($possible[FREE]) && mt_rand(1, 100) > 55) {
                             unset($possible[FREE]);
                         }
                     }
