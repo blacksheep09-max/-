@@ -1076,14 +1076,14 @@ class Table
         }
 
         if ($free) {
-            // 固定1列金色列；爆奖转固定3列金色列
+            // 普通转：固定中间列（列2）金色列；爆奖转：3列全金色列
             $is_boom = !$this->free_boom_used && $this->free_boom_left_count > 0 && $this->free == $this->free_boom_left_count;
-            $golden_count = $is_boom ? 3 : 1;
-            $available_cols = [1, 2, 3];
-            shuffle($available_cols);
-            $golden_columns = array_slice($available_cols, 0, $golden_count);
-            foreach ($golden_columns as $gc) {
-                $col_is_golden[$gc] = true;
+            if ($is_boom) {
+                $col_is_golden[1] = true;
+                $col_is_golden[2] = true;
+                $col_is_golden[3] = true;
+            } else {
+                $col_is_golden[2] = true;
             }
 
             // 补12次机制：最后剩2轮时，如果累计没达到整轮最低倍数，强制给3个FREE
