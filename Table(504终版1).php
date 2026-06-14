@@ -68,6 +68,7 @@ define('FREEPOSSIBLE', [ERTONG => 50, ERTIAO => 50, SANTONG => 50, WUTONG => 30,
 
 define('BIG_WIN', [3 => 40, 2 => 20, 1 => 10]);
 
+define('MAX_WIN_SCORE', 5000000);
 
 
 define('WILD_PERCENT', 5000);
@@ -112,7 +113,7 @@ class Table
 
     private $mapPossibleSum = [];
 
-
+    private $all_win = 0;
 
     private $cur_result = [
 
@@ -398,6 +399,7 @@ class Table
 
 
 
+        $was_free_round = false;
         if ($this->free <= 0) {
 
             $use = $message['data']['score'] * $message['data']['double'] * GAME_DOUBLE;
@@ -405,6 +407,7 @@ class Table
         } else {
 
             $use = 0;
+            $was_free_round = true;
 
         }
 
@@ -536,9 +539,9 @@ class Table
 
 
 
-        $is_free_round = ($this->free > 0 && $this->use > 0);
+        $is_free_round = ($this->free > 0);
 
-        $use_val = $this->use;
+        $use_val = $this->betGold * $this->betDouble * GAME_DOUBLE;
         $free_total_left_score = $is_free_round ? max(0, $use_val * $this->free_total_limit_double - $this->free_get) : PHP_INT_MAX;
 
         // 判断当前这转是否是本轮免费指定的爆奖转
@@ -641,6 +644,8 @@ class Table
             $this->cur_result['cur_gold'] = [];
             $this->cur_result['double_arr'] = [];
             $this->cur_result['cur_time'] = [];
+            $this->cur_result['free_logo'] = 0;
+            $this->cur_result['getfree'] = 0;
         }
 
         $reward = 0;
@@ -875,12 +880,17 @@ class Table
 
 
 
-        $double = intval($user_win / $this->use);
+        $base_use = $this->betGold * $this->betDouble * GAME_DOUBLE;
+        $double = $base_use > 0 ? intval($user_win / $base_use) : 0;
 
         if ($user_win > HORSE['score'] && $double >= HORSE['double']) {
 
             Logic::HorseLamp($this->uid, $user_win, $double);
 
+        }
+
+        if ($was_free_round) {
+            $this->free--;
         }
 
     }
